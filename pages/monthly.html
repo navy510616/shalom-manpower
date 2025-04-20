@@ -1,0 +1,41 @@
+<div class="main-header">
+  <div class="date-control">
+    <button class="arrow-btn" onclick="prevMonth()">←</button>
+    <span class="date-text">
+      <span class="date-part clickable" onclick="openYearSelect()">
+        <span id="yearDisplay">2025</span>년
+      </span>
+      <span class="date-part clickable" onclick="openMonthSelect()">
+        <span id="monthDisplay">4</span>월
+      </span>
+    </span>
+    <button class="arrow-btn" onclick="nextMonth()">→</button>
+  </div>
+  <div id="datePopup" style="display: none;"></div>
+</div>
+
+<div class="controls">
+  <button onclick="saveData()" title="저장"><span class="emoji">💾</span></button>
+  <button onclick="addNameRow()" title="이름 추가"><span class="emoji">➕</span></button>
+  <button onclick="deleteSelectedRows()" title="이름 삭제"><span class="emoji">➖</span></button>
+  <button onclick="sortByNameAsc()" title="오름차순"><span class="emoji">🔼</span></button>
+  <button onclick="sortByNameDesc()" title="내림차순"><span class="emoji">🔽</span></button>
+  <button onclick="increaseZoom()" title="화면 확대"><span class="emoji">➕🔍</span></button>
+  <button onclick="decreaseZoom()" title="화면 축소"><span class="emoji">➖🔍</span></button>
+  <input type="file" id="importExcel" accept=".xlsx" onchange="handleFileUpload(event)" hidden />
+  <button onclick="document.getElementById('importExcel').click()" title="엑셀 가져오기"><span class="emoji">📂</span></button>
+  <button onclick="exportToExcel()" title="내려받기"><span class="emoji">⬇️</span></button>
+</div>
+
+<div class="table-scroll-container">
+  <table id="scheduleTable">
+    <thead>
+      <tr>
+        <th><input type="checkbox" id="selectAll" /></th>
+        <th>이름</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+</div>
+

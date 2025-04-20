@@ -1,0 +1,33 @@
+<!-- PDF.js 라이브러리 CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js"></script>
+
+<div class="invoice-layout">
+  <div class="invoice-left">
+    <div class="top-controls">
+      <button id="saveBtn">💾</button>
+      <button id="addBtn">➕</button>
+      <button id="delBtn">➖</button>
+    </div>
+
+    <table id="invoiceTable">
+      <thead>
+        <tr>
+          <th>선택</th>
+          <th>파일이름</th>
+          <th>불러오기</th>
+          <th>미리보기</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- 초기 행 추가는 JS에서 처리 -->
+      </tbody>
+    </table>
+  </div>
+
+  <div class="invoice-right">
+      <div id="imageViewer"></div>
+  </div>
+</div>
+
+<link rel="stylesheet" href="css/invoice.css">

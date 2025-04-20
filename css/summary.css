@@ -1,0 +1,241 @@
+/* 테이블 고정 너비 설정 */
+#summaryTable {
+    table-layout: fixed;
+    width: max-content;
+    border-collapse: separate;
+    border-spacing: 2px;
+    min-width: 900px;
+    user-select: none;
+}
+
+/* 셀 공통 스타일 */
+#summaryTable th,
+#summaryTable td {
+    border: 1px solid #ccc;
+    padding: 6px 4px;
+    text-align: center;
+    background-color: white;
+    box-sizing: border-box;
+    cursor: pointer;
+}
+
+/* 👇 이름, 비고, 체크박스 열만 기본 글자 크기 */
+#summaryTable th:not(.day-col),
+#summaryTable td:not(.day-col):not([contenteditable="true"]) {
+    font-size: 15px;
+}
+
+/* 👇 날짜 열의 데이터 입력 셀만 폰트 작게 */
+#summaryTable tbody td.day-col[contenteditable="true"] {
+    font-size: 10px !important;
+}
+
+/* 👇 날짜 열은 별도 크기로 설정 */
+#summaryTable th.day-col,
+#summaryTable td.day-col {
+    font-size: 15px;
+}
+
+#summaryTable th {
+    background-color: #ecf0f1;
+    position: sticky;
+    top: 0;
+    z-index: 3;
+}
+
+#summaryTable thead th:first-child,
+#summaryTable tbody td:first-child {
+    position: sticky;
+    left: 0;
+    background-color: #ecf0f1;
+    z-index: 2;
+}
+
+#summaryTable thead th:nth-child(2),
+#summaryTable tbody td:nth-child(2) {
+    position: sticky;
+    left: 30px;
+    background-color: #ecf0f1;
+    z-index: 3;
+}
+
+/* 열 별 고정 너비 설정 */
+th.checkbox-col,
+td.checkbox-col {
+    width: 30px;
+    min-width: 30px;
+    max-width: 30px;
+}
+
+th.name-col,
+td.name-col {
+    width: 70px;
+    min-width: 70px;
+    max-width: 70px;
+}
+
+th.remark-col,
+td.remark-col {
+    width: 80px;
+    min-width: 80px;
+    max-width: 80px;
+}
+
+th.day-col,
+td.day-col {
+    width: 34px;  /*날짜열 너비 조정 */
+    min-width: 34px;
+    max-width: 34px;
+}
+
+#summaryTable td[contenteditable='true'] {
+    outline: none;
+    background-color: #f9f9f9;
+}
+
+#summaryTable td[contenteditable='true']:focus {
+    border: 2px solid #4285f4;
+    background-color: #eaf1fb;
+}
+
+/* 선택 셀 강조 */
+#summaryTable td.selected {
+    outline: 2px solid #8888ff;
+    background-color: #f0f8ff;
+}
+
+/* 색상 클래스 */
+.cell-color-yellow {
+    background-color: #fff4cc !important;
+}
+
+.cell-color-green {
+    background-color: #d4fcd4 !important;
+}
+
+.cell-color-blue {
+    background-color: #cce5ff !important;
+}
+
+.cell-color-pink {
+    background-color: #ffe0f0 !important;
+}
+
+.cell-color-gray {
+    background-color: #eeeeee !important;
+}
+
+.color-picker-popup {
+    position: absolute;
+    display: flex;
+    gap: 6px;
+    background: white;
+    border: 1px solid #ccc;
+    padding: 6px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    border-radius: 4px;
+    z-index: 9999;
+}
+
+.color-picker-popup div {
+    width: 20px;
+    height: 20px;
+    border-radius: 3px;
+    cursor: pointer;
+    border: 1px solid #999;
+}
+
+.color-picker-popup .yellow {
+    background-color: #fff4cc;
+}
+
+.color-picker-popup .green {
+    background-color: #d4fcd4;
+}
+
+.color-picker-popup .blue {
+    background-color: #cce5ff;
+}
+
+.color-picker-popup .pink {
+    background-color: #ffe0f0;
+}
+
+.color-picker-popup .gray {
+    background-color: #eeeeee;
+}
+
+/* 스크롤 컨테이너 */
+.table-scroll-container {
+    overflow: auto;
+    height: calc(100vh - 150px);
+    position: relative;
+}
+
+/* 줌 기반 입력 크기 설정 */
+:root {
+    --zoom: 1;
+    --input-font-size: calc(14px * var(--zoom));
+    --input-height: calc(28px * var(--zoom));
+    --day-font-size: 8px;
+}
+
+input.name-input,
+input.amount-input,
+input.sum-input,
+input.remark-input {
+    font-size: var(--input-font-size);
+    height: var(--input-height);
+}
+
+input.name-input {
+    width: calc(10ch * var(--zoom));
+    text-align: center;
+}
+
+input.amount-input,
+input.sum-input {
+    width: calc(10ch * var(--zoom));
+    text-align: right;
+}
+
+input.sum-input {
+    width: 10ch;
+}
+
+input[type="text"],
+input[type="number"] {
+    padding: 5px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    -moz-appearance: textfield;
+}
+
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+#summaryTable td.selected-cell {
+    background-color: #fff4cc !important;
+}
+
+#summaryTable td.selected {
+    outline: 2px solid #8888ff;
+    background-color: #f0f8ff;
+}
+
+#mergeHorizontalBtn,
+#mergeVerticalBtn {
+    color: #2c3e50;
+    /* 검정 또는 어두운 남색 계열 */
+    font-size: 18px;
+    background-color: transparent;
+    border: none;
+    cursor: pointer;
+}
+
+.name-col {
+    white-space: nowrap;
+}

@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>Shalom Manpower - 로그인</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root { --site-title-size: 70px; }
+    body {
+      font-family: 'Roboto', sans-serif;
+      background-color: #ffffff;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      padding-top:50px;
+    }
+    .site-title {
+      font-size: var(--site-title-size);
+      font-weight: 700;
+      color: #333;
+      margin-bottom: 30px;
+    }
+    .login-container {
+      background-color: #f9f9f9;
+      padding: 40px;
+      border-radius: 10px;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+      width: 300px;
+      text-align: center;
+    }
+    input[type="text"], input[type="password"], button {
+      width: 100%;
+      padding: 10px;
+      margin: 10px 0;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      box-sizing: border-box;
+    }
+    button {
+      background-color: #4facfe;
+      color: white;
+      font-weight: bold;
+      border: none;
+      cursor: pointer;
+    }
+    button:hover { background-color: #00c6fb; }
+    .error { color: red; font-size: 0.9em; margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <div class="site-title">평안인력</div>
+  <div class="login-container">
+    <h2>로그인</h2>
+    <form id="loginForm">
+      <input type="text" id="username" placeholder="이메일" required>
+      <input type="password" id="password" placeholder="비밀번호" required>
+      <button type="submit">로그인</button>
+      <div id="errorMsg" class="error"></div>
+    </form>
+  </div>
+
+  <!-- Firebase SDK 연동 -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
+
+    // 🔐 Firebase 설정 정보
+    const firebaseConfig = {
+      apiKey: "AIzaSyBzkoyKiSBrhC-leS0FeVCnHQzAUBtOYBw",
+      authDomain: "shalom-manpower.firebaseapp.com",
+      projectId: "shalom-manpower",
+      storageBucket: "shalom-manpower.firebasestorage.app",
+      messagingSenderId: "554580073535",
+      appId: "1:554580073535:web:49899724ce3dd926c22c8a",
+      measurementId: "G-NT2CFFLQLR"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+
+    // 로그인 처리
+    const form = document.getElementById("loginForm");
+    const errorMsg = document.getElementById("errorMsg");
+
+    // ✅ 이전에 저장된 이메일이 있으면 자동 입력
+    const savedEmail = localStorage.getItem("savedEmail");
+    if (savedEmail) {
+      document.getElementById("username").value = savedEmail;
+    }
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const email = document.getElementById("username").value.trim();
+      const password = document.getElementById("password").value.trim();
+
+      try {
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+        console.log("✅ 로그인 성공:", user.email);
+        localStorage.setItem("savedEmail", email);
+        window.location.href = "index.html";
+      } catch (error) {
+        errorMsg.textContent = "❌ 로그인 실패: 이메일 또는 비밀번호가 잘못되었습니다.";
+        console.error("로그인 에러:", error);
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Shalom Manpower</title>
+    <link rel="stylesheet" href="css/style.css" />
+    <link rel="stylesheet" href="css/summary.css" />
+    <link rel="stylesheet" href="css/invoice.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.16.9/xlsx.full.min.js"></script>
+
+    <!-- Firebase 인증 검사 -->
+    <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+      import {
+        getAuth,
+        onAuthStateChanged,
+      } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
+
+      const firebaseConfig = {
+        apiKey: "AIzaSyBzkoyKiSBrhC-leS0FeVCnHQzAUBtOYBw",
+        authDomain: "shalom-manpower.firebaseapp.com",
+        projectId: "shalom-manpower",
+        storageBucket: "shalom-manpower.firebasestorage.app",
+        messagingSenderId: "554580073535",
+        appId: "1:554580073535:web:49899724ce3dd926c22c8a",
+        measurementId: "G-NT2CFFLQLR",
+      };
+
+      const app = initializeApp(firebaseConfig);
+      const auth = getAuth(app);
+
+      onAuthStateChanged(auth, (user) => {
+        if (!user) {
+          window.location.href = "login.html";
+        }
+      });
+    </script>
+  </head>
+
+  <body>
+    <div class="layout">
+      <div class="sidebar">
+        <h2>Menu</h2>
+        <a href="#" onclick="navigate('monthly')">월별 관리</a>
+        <a href="#" onclick="navigate('schedule')">월말 정리</a>
+        <a href="#" onclick="navigate('invoice')">거래명세서</a>
+        <a href="#" onclick="logout()">🔓 로그아웃</a>
+        <!-- <div class="resizer">⋮⋮</div> -->
+      </div>
+      <div class="main-content" id="page-container">
+        <!-- 동적으로 콘텐츠 삽입 -->
+      </div>
+    </div>
+    <!-- ✅ Firebase 로그아웃 로직 -->
+    <script type="module">
+      import {
+        getAuth,
+        signOut,
+      } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
+      const auth = getAuth();
+
+      window.logout = function () {
+        signOut(auth).then(() => {
+          window.location.href = "login.html";
+        });
+      };
+    </script>
+    <script src="js/main.js"></script>
+  </body>
+</html>

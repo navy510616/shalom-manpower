@@ -1,0 +1,73 @@
+<!-- pages/summary.html -->
+<div class="main-header">
+  <div class="date-control">
+    <button id="prevMonthBtn" class="arrow-btn">←</button>
+    <span class="date-text">
+      <span class="date-part clickable">
+        <span id="yearDisplay">2025</span>년
+      </span>
+      <span class="date-part clickable">
+        <span id="monthDisplay">4</span>월
+      </span>
+    </span>
+    <button id="nextMonthBtn" class="arrow-btn">→</button>
+  </div>
+  <div id="datePopup" style="display: none"></div>
+</div>
+
+<div class="controls">
+  <button id="saveBtn" title="저장">
+    <span class="emoji">💾</span>
+  </button>
+  <button id="addNameBtn" title="이름 추가">
+    <span class="emoji">➕</span>
+  </button>
+  <button id="deleteRowBtn" title="이름 삭제">
+    <span class="emoji">➖</span>
+  </button>
+  <button id="sortAscBtn" title="오름차순">
+    <span class="emoji">🔼</span>
+  </button>
+  <button id="sortDescBtn" title="내림차순">
+    <span class="emoji">🔽</span>
+  </button>
+  <button id="zoomInBtn" title="화면 확대">
+    <span class="emoji">➕🔍</span>
+  </button>
+  <button id="zoomOutBtn" title="화면 축소">
+    <span class="emoji">➖🔍</span>
+  </button>
+  <input type="file" id="importExcel" accept=".xlsx" hidden />
+  <button id="importBtn" title="엑셀 가져오기">
+    <span class="emoji">📂</span>
+  </button>
+  <button id="exportBtn" title="내려받기">
+    <span class="emoji">⬇️</span>
+  </button>
+  <button id="highlightBtn" title="셀 색상 변경">
+    <span class="emoji">🎨</span>
+  </button>
+  <!-- <button id="mergeHorizontalBtn" title="가로 병합">
+    <span class="emoji">⇔</span>
+  </button>
+  <button id="mergeVerticalBtn" title="세로 병합">
+    <span class="emoji">⇕</span>
+  </button>
+  <button id="unmergeBtn" title="병합 해제">
+    <span class="emoji">❎</span>
+  </button> -->
+</div>
+
+<div class="table-scroll-container">
+  <table id="summaryTable" class="data-table">
+    <thead>
+      <tr>
+        <th><input type="checkbox" id="selectAll" /></th>
+        <th>이름</th>
+        <!-- JS로 날짜 삽입 -->
+        <th>비고</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+</div>
