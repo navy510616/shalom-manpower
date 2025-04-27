@@ -34,6 +34,24 @@
           window.location.href = "login.html";
         }
       });
+
+      // 👉 창 닫을 때만 로그아웃, 새로고침은 제외
+      window.addEventListener('beforeunload', async (event) => {
+        const entries = performance.getEntriesByType('navigation');
+        const navType = entries.length > 0 ? entries[0].type : '';
+
+        if (navType !== 'reload') {  // 새로고침이 아니라면 (= 창 닫기)
+          try {
+            await signOut(auth);
+            console.log("✅ 창 닫기 감지 → 자동 로그아웃 완료");
+          } catch (error) {
+            console.error("❌ 로그아웃 실패:", error);
+          }
+        } else {
+          console.log("🔄 새로고침 감지 → 로그아웃 안 함");
+        }
+      });
+      
     </script>
   </head>
 
