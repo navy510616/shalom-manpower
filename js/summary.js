@@ -386,10 +386,10 @@ export function enableColorPicker() {
     popup.style.zIndex = '9999';
 
     const colors = [
-        '#ffffff', '#f8f9fa', '#ffeeba', '#d4edda', '#bee5eb', '#f5c6cb', '#d6d8db', '#c3e6cb',
-        '#b8daff', '#f5b7b1', '#f0e68c', '#d1ecf1', '#e2e3e5', '#f9f7f7', '#fdfd96', '#ffb3ba',
-        '#ffcccb', '#ccffcc', '#ccffff', '#ccccff', '#ffccff', '#f0fff0', '#e6e6fa', '#ffe4e1',
-        '#fafad2', '#f0f8ff', '#f5fffa', '#d3d3d3', '#fdf5e6', '#f0ffff', '#ffe4b5', '#e0ffff'
+        '#FF0000', '#FF4500', '#FF6347', '#FF7F50', '#FF8C00', '#FFA500', '#FFD700', '#FFFF00',
+        '#9ACD32', '#6B8E23', '#32CD32', '#228B22', '#008000', '#006400', '#00CED1', '#20B2AA',
+        '#4682B4', '#1E90FF', '#0000FF', '#00008B', '#4B0082', '#8A2BE2', '#9400D3', '#800080',
+        '#C71585', '#DC143C', '#B22222', '#8B0000', '#A52A2A', '#D2691E', '#8B4513', '#2F4F4F'
     ];
 
     colors.forEach(hex => {
