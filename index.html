@@ -78,8 +78,15 @@
       const auth = getAuth();
 
       window.logout = function () {
+
+        // ✅ 로그인 세션 지우기
+        sessionStorage.removeItem('isLoggedIn');
+
+        // ✅ Firebase 인증 로그아웃
         signOut(auth).then(() => {
           window.location.href = "login.html";
+        }).catch((error) => {
+          console.error('❌ 로그아웃 실패:', error);
         });
       };
     </script>
