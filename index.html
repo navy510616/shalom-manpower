@@ -29,11 +29,11 @@
       const app = initializeApp(firebaseConfig);
       const auth = getAuth(app);
 
-      onAuthStateChanged(auth, (user) => {
-        if (!user) {
-          window.location.href = "login.html";
-        }
-      });
+      // onAuthStateChanged(auth, (user) => {
+      //  if (!user) {
+      //    window.location.href = "login.html";
+      //  }
+      //});
 
       // 👉 창 닫을 때만 로그아웃, 새로고침은 제외
       window.addEventListener('beforeunload', async (event) => {
