@@ -43,6 +43,15 @@ window.navigate = async function (page) {
 
 // ✅ 초기 진입 시 페이지 설정
 document.addEventListener('DOMContentLoaded', () => {
+    
+    // 🔥 로그인 상태 확인 추가 (sessionStorage 기준)
+    const isLoggedIn = sessionStorage.getItem('isLoggedIn');
+    if (!isLoggedIn) {
+        // 로그인 안 되어 있으면 login.html로 강제 이동
+        window.location.href = './login.html';
+        return; // 이하 코드 실행 막음
+    }
+    
     /* 사이드바 메뉴 클릭 */
     document.querySelectorAll('.sidebar a').forEach(a => {
         a.addEventListener('click', e => {
