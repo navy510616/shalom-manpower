@@ -105,7 +105,7 @@
         // ✅ 로그인 성공 시 세션 기록 추가
         sessionStorage.setItem('isLoggedIn', 'true');
         
-        window.location.href = "index.html";
+        window.location.href = "/shalom-manpower/index.html";
       } catch (error) {
         errorMsg.textContent = "❌ 로그인 실패: 이메일 또는 비밀번호가 잘못되었습니다.";
         console.error("로그인 에러:", error);
