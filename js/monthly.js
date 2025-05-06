@@ -130,10 +130,7 @@ async function loadData() {
 
     // 🔁 이름 목록: 이전달 + 현재달 통합
     const currentNames = currentData.map(r => r.name);
-    const nameSet = new Set([
-        ...Object.keys(prevTotals).filter(name => currentNames.includes(name)),
-        ...currentNames
-    ]);
+    const nameSet = new Set(currentData.map(r => r.name));
 
     tbody.innerHTML = '';
 
