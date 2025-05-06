@@ -6,6 +6,7 @@ let zoomLevel = 1;
 export function initSummary() {
     console.log("✅ initSummary 실행됨");
     updateDateDisplay();
+    makeAllCellsFocusable();
     setupControls();
     enableArrowNavigation();
     enableColorPicker();
@@ -15,6 +16,7 @@ export function initSummary() {
 function updateDateDisplay() {
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth() + 1;
+    const days = new Date(year, month, 0).getDate();
 
     const yearEl = document.getElementById('yearDisplay');
     const monthEl = document.getElementById('monthDisplay');
@@ -27,40 +29,35 @@ function updateDateDisplay() {
     const theadRow = document.querySelector('#summaryTable thead tr');
     if (!theadRow) return;
 
-    while (theadRow.children.length > 3) {
-        theadRow.removeChild(theadRow.children[2]);
-    }
-
-    const days = new Date(year, month, 0).getDate();
-    const remarkTh = theadRow.lastElementChild;
-
-    // ✅ 고정 너비 설정
-    theadRow.children[0].className = 'checkbox-col'; // 체크박스 열
-    theadRow.children[1].className = 'name-col'; // 이름 열
-    remarkTh.className = 'remark-col'; // 비고 열
+    theadRow.innerHTML = `
+        <th class="checkbox-col"></th>
+        <th class="remark-col">비고</th>
+        <th class="index-col">#</th>
+        <th class="name-col">이름</th>
+    `;
 
     for (let i = 1; i <= days; i++) {
         const th = document.createElement('th');
         th.textContent = i;
         th.className = 'day-col';
-        theadRow.insertBefore(th, remarkTh);
+        theadRow.appendChild(th);
     }
 
     const rows = document.querySelectorAll('#summaryTable tbody tr');
-    rows.forEach(row => {
-        while (row.children.length > 3) {
-            row.removeChild(row.children[2]);
-        }
-
-        row.children[0].className = 'checkbox-col';
-        row.children[1].className = 'name-col';
-        row.lastElementChild.className = 'remark-col';
-
+    rows.forEach((row, idx) => {
+        while (row.firstChild) row.removeChild(row.firstChild);
+        row.innerHTML = `
+            <td class="checkbox-col"><input type="checkbox" /></td>
+            <td class="remark-col" contenteditable="true"></td>
+            <td class="index-col">${idx + 1}</td>
+            <td class="name-col" contenteditable="true">이름</td>
+            ${Array.from({ length: days }, () => '<td contenteditable="true" class="day-col"></td>').join('')}
+        `;
         for (let i = 1; i <= days; i++) {
             const td = document.createElement('td');
             td.contentEditable = true;
             td.className = 'day-col';
-            row.insertBefore(td, row.lastElementChild);
+            row.appendChild(td);
         }
     });
 }
@@ -86,7 +83,9 @@ function setupControls() {
     qs('sortDescBtn')?.addEventListener('click', sortByNameDesc);
     qs('zoomInBtn')?.addEventListener('click', () => {
         zoomLevel += 0.1;
-        qs('summaryTable').style.transform = `scale(${zoomLevel})`;
+        const table = qs('summaryTable');
+        table.style.transformOrigin = 'top left'; // ✅ 좌측 상단 기준
+        table.style.transform = `scale(${zoomLevel})`;
     });
     qs('zoomOutBtn')?.addEventListener('click', () => {
         zoomLevel = Math.max(0.5, zoomLevel - 0.1);
@@ -108,54 +107,97 @@ function setupControls() {
 }
 
 function enableArrowNavigation() {
+    const tbody = document.querySelector('#summaryTable tbody');
+
+    // 모든 셀에 tabindex 설정 (한 번만 실행되도록)
+    tbody.querySelectorAll('td').forEach(td => {
+        if (!td.hasAttribute('tabindex')) {
+            td.setAttribute('tabindex', '-1');
+        }
+    });
+
     document.addEventListener('keydown', e => {
         const active = document.activeElement;
-        if (!active || active.tagName !== 'TD' || !active.isContentEditable) return;
+        if (!active || active.tagName !== 'TD') return;
 
         const cell = active;
         const row = cell.parentElement;
         const tbody = document.querySelector('#summaryTable tbody');
-
-        const rowIndex = Array.from(tbody.rows).indexOf(row);
-        const cellIndex = Array.from(row.children).indexOf(cell);
+        
+        const rows = Array.from(tbody.rows);
+        const rowIndex = rows.indexOf(row);
+        const cells = Array.from(row.cells);
+        const cellIndex = cells.indexOf(cell);
 
         let targetCell = null;
 
+        const moveHorizontal = (direction) => {
+            let i = cellIndex + direction;
+            while (i >= 0 && i < row.children.length) {
+                const next = row.children[i];
+                if (next && next.tagName === 'TD') {
+                    return next;
+                }
+                i += direction;
+            }
+            return null;
+        };
+
+        const moveVertical = (direction) => {
+            const targetRowIndex = rowIndex + direction;
+            if (targetRowIndex < 0 || targetRowIndex >= tbody.rows.length) return null;
+            return tbody.rows[targetRowIndex].children[cellIndex];
+        };
+
         switch (e.key) {
             case 'ArrowLeft':
-                if (cell.previousElementSibling) {
-                    targetCell = cell.previousElementSibling;
+                if (cellIndex > 0) {
+                    targetCell = cells[cellIndex - 1];
                 }
                 break;
             case 'ArrowRight':
-                if (cell.nextElementSibling) {
-                    targetCell = cell.nextElementSibling;
+                if (cellIndex < cells.length - 1) {
+                    targetCell = cells[cellIndex + 1];
                 }
                 break;
             case 'ArrowUp':
                 if (rowIndex > 0) {
-                    const prevRow = tbody.rows[rowIndex - 1];
-                    targetCell = prevRow.children[cellIndex];
+                    const prevRow = rows[rowIndex - 1];
+                    const prevCells = Array.from(prevRow.cells);
+                    targetCell = prevCells[cellIndex];
                 }
                 break;
             case 'ArrowDown':
-                if (rowIndex < tbody.rows.length - 1) {
-                    const nextRow = tbody.rows[rowIndex + 1];
-                    targetCell = nextRow.children[cellIndex];
+                if (rowIndex < rows.length - 1) {
+                    const nextRow = rows[rowIndex + 1];
+                    const nextCells = Array.from(nextRow.cells);
+                    targetCell = nextCells[cellIndex];
                 }
                 break;
             case 'Enter':
                 e.preventDefault();
-                if (rowIndex < tbody.rows.length - 1) {
-                    const nextRow = tbody.rows[rowIndex + 1];
-                    targetCell = nextRow.children[cellIndex];
+                if (rowIndex < rows.length - 1) {
+                    const nextRow = rows[rowIndex + 1];
+                    const nextCells = Array.from(nextRow.cells);
+                    targetCell = nextCells[cellIndex];
                 }
                 break;
         }
 
-        if (targetCell && targetCell.isContentEditable) {
+        if (targetCell) {
             e.preventDefault();
-            targetCell.focus();
+            targetCell.focus(); // ✅ 실제 포커스 이동
+            if (targetCell.isContentEditable) {
+                // 선택된 셀 강조 스타일 유지
+                setTimeout(() => {
+                    const range = document.createRange();
+                    const sel = window.getSelection();
+                    range.selectNodeContents(targetCell);
+                    range.collapse(false);
+                    sel.removeAllRanges();
+                    sel.addRange(range);
+                }, 0);
+            }
         }
     });
 }
@@ -165,35 +207,68 @@ function addNameRow() {
     const days = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
     const row = document.createElement('tr');
     row.innerHTML = `
-    <td><input type="checkbox" /></td>
-    <td contenteditable="true">이름</td>
-    ${Array.from({ length: days }, () => '<td contenteditable="true" class="day-col"></td>').join('')}
-    <td contenteditable="true"></td>
-  `;
+        <td class="checkbox-col"><input type="checkbox" /></td>
+        <td class="remark-col" contenteditable="true"></td>
+        <td class="index-col">${tbody.rows.length + 1}</td>
+        <td class="name-col" contenteditable="true">이름</td>
+        ${Array.from({ length: days }, () => '<td contenteditable="true" class="day-col"></td>').join('')}
+    `;
     tbody.appendChild(row);
 }
 
 function deleteSelectedRows() {
-    document.querySelectorAll('#summaryTable tbody tr')
-        .forEach(row => {
-            if (row.querySelector('input[type="checkbox"]')?.checked) {
-                row.remove();
-            }
-        });
+    const tbody = document.querySelector('#summaryTable tbody');
+    tbody.querySelectorAll('tr').forEach(row => {
+        if (row.querySelector('input[type="checkbox"]')?.checked) {
+            row.remove();
+        }
+    });
+
+    // ✅ 순번 다시 정렬
+    Array.from(tbody.rows).forEach((row, idx) => {
+        const indexCell = row.querySelector('.index-col');
+        if (indexCell) {
+            indexCell.textContent = idx + 1;
+        }
+    });
 }
 
 function sortByNameAsc() {
     const tbody = document.querySelector('#summaryTable tbody');
     const rows = Array.from(tbody.querySelectorAll('tr'));
-    rows.sort((a, b) => (a.cells[1]?.textContent ?? '').localeCompare(b.cells[1]?.textContent ?? '', 'ko'));
-    rows.forEach(row => tbody.appendChild(row));
+
+    rows.sort((a, b) => {
+        const nameA = a.querySelector('.name-col')?.textContent.trim() ?? '';
+        const nameB = b.querySelector('.name-col')?.textContent.trim() ?? '';
+        return nameA.localeCompare(nameB, 'ko');
+    });
+
+    rows.forEach((row, idx) => {
+        tbody.appendChild(row); // 정렬된 순서로 다시 append
+        const indexCell = row.querySelector('.index-col');
+        if (indexCell) {
+            indexCell.textContent = idx + 1; // ✅ 순번 재정렬
+        }
+    });
 }
 
 function sortByNameDesc() {
     const tbody = document.querySelector('#summaryTable tbody');
     const rows = Array.from(tbody.querySelectorAll('tr'));
-    rows.sort((a, b) => (b.cells[1]?.textContent ?? '').localeCompare(a.cells[1]?.textContent ?? '', 'ko'));
-    rows.forEach(row => tbody.appendChild(row));
+
+    rows.sort((a, b) => {
+        const nameA = a.querySelector('.name-col')?.textContent.trim() ?? '';
+        const nameB = b.querySelector('.name-col')?.textContent.trim() ?? '';
+        return nameB.localeCompare(nameA, 'ko');
+    });
+
+    rows.forEach((row, idx) => {
+        tbody.appendChild(row);
+        const indexCell = row.querySelector('.index-col');
+        if (indexCell) {
+            indexCell.textContent = idx + 1; // ✅ 순번 재정렬
+        }
+    });
 }
 
 function handleFileUpload(e) {
@@ -309,9 +384,10 @@ export function enableColorPicker() {
 
         // ✅ Delete 키로 선택 셀 내용 삭제
         if (e.key === 'Delete') {
-            selectedCells.forEach(cell => {
-                cell.textContent = '';
-            });
+            const active = document.activeElement;
+            if (active && active.tagName === 'TD' && active.isContentEditable) {
+                active.textContent = '';
+            }
         }
     });
 
@@ -335,13 +411,13 @@ export function enableColorPicker() {
 
     function toggleCellSelection(cell) {
         if (!selectedCells.has(cell)) {
-            cell.classList.add('selected');
+            cell.classList.add('cell-selected');
             selectedCells.add(cell);
         }
     }
 
     function clearSelection() {
-        selectedCells.forEach(cell => cell.classList.remove('selected'));
+        selectedCells.forEach(cell => cell.classList.remove('cell-selected'));
         selectedCells.clear();
     }
 
@@ -364,7 +440,7 @@ export function enableColorPicker() {
             for (let j = colMin; j <= colMax; j++) {
                 const cell = row.cells[j];
                 if (cell && cell.isContentEditable) {
-                    cell.classList.add('selected');
+                    cell.classList.add('cell-selected');
                     selectedCells.add(cell);
                 }
             }
@@ -476,16 +552,18 @@ async function saveDataToFirebase() {
 
     rows.forEach(tr => {
         const cells = Array.from(tr.querySelectorAll('td'));
-        const name = cells[1]?.textContent.trim() || '';
+        const remark = cells[1]?.textContent.trim() || '';
+        const name = cells[3]?.textContent.trim() || '';
         const row = [];
 
-        for (let i = 2; i < cells.length; i++) {
+        for (let i = 4; i < cells.length; i++) {
             row.push({
                 value: cells[i].textContent.trim(),
                 color: cells[i].style.backgroundColor || ''
             });
         }
 
+        row.push({ value: remark, color: '' });
         summaryData.push({ name, data: row });
     });
 
@@ -522,16 +600,21 @@ async function loadDataFromFirebase() {
 
         tbody.innerHTML = '';
 
-        rows.forEach(({ name, data }) => {
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td><input type="checkbox" /></td>
-                <td contenteditable="true">${name}</td>
-                ${data.slice(0, days).map(cell => `
+        rows.forEach(({ name, data }, idx) => {
+            const remark = data.length > days ? data[days].value : '';
+            const dayCells = data.slice(0, data.length - 1).map(cell => `
                 <td contenteditable="true" class="day-col" style="background-color: ${cell.color || ''}">
                     ${cell.value || ''}
-                </td>`).join('')}
-                <td contenteditable="true"></td> <!-- 비고 -->
+                </td>
+            `).join('');
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td class="checkbox-col"><input type="checkbox" /></td>
+                <td class="remark-col" contenteditable="true">${remark}</td>
+                <td class="index-col">${idx + 1}</td>
+                <td class="name-col" contenteditable="true">${name}</td>
+                ${dayCells}
             `;
             tbody.appendChild(tr);
         });
@@ -564,6 +647,16 @@ function toast(msg) {
         d.style.opacity = 0;
         setTimeout(() => d.remove(), 300);
     }, 1000);
+}
+
+function makeAllCellsFocusable() {
+    document.querySelectorAll('#summaryTable td').forEach(td => {
+        if (!td.hasAttribute('tabindex')) td.setAttribute('tabindex', '-1');
+        // ✅ 수동으로 contenteditable 허용 (또는 탐색 가능하게 유지)
+        if (td.classList.contains('index-col') || td.classList.contains('remark-col')) {
+            td.setAttribute('contenteditable', 'false');
+        }
+    });
 }
 
 export function reset() {
