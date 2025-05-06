@@ -154,8 +154,10 @@ async function loadData() {
         }
 
         // 전월잔금 입력 (누적된 total)
-        qsIn(tr, '.prev-input').value = prevTotal.toLocaleString('ko-KR');
-
+        const userPrev = rowData?.prev?.replace(/,/g, '');
+        const finalPrev = userPrev ? parseInt(userPrev) : prevTotal;
+        qsIn(tr, '.prev-input').value = finalPrev.toLocaleString('ko-KR');
+        
         // 총합계 계산: 월합계 + 전월잔금
         const currSum = parseInt(qsIn(tr, '.sum-input').value.replace(/,/g, '') || '0');
         const total = prevTotal + currSum;
