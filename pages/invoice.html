@@ -4,6 +4,15 @@
 
 <div class="invoice-layout">
   <div class="invoice-left">
+    <div class="invoice-month-navigation">
+      <button id="prevMonthBtn" class="arrow-btn">←</button>
+      <span class="date-label">
+        <span id="yearDisplay">2025</span>년
+        <span id="monthDisplay">5</span>월
+      </span>
+      <button id="nextMonthBtn" class="arrow-btn">→</button>
+    </div>
+
     <div class="top-controls">
       <button id="saveBtn">💾</button>
       <button id="addBtn">➕</button>
@@ -29,5 +38,7 @@
       <div id="imageViewer"></div>
   </div>
 </div>
+
+<div id="toast" class="toast"></div>
 
 <link rel="stylesheet" href="css/invoice.css">
