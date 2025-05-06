@@ -66,7 +66,7 @@ function makeHeader(y, m) {
     const days = new Date(y, m, 0).getDate();
     for (let d = 1; d <= days; d++)
         tr.insertAdjacentHTML('beforeend', `<th>${d}</th>`);
-    tr.insertAdjacentHTML('beforeend', '<th>합계</th><th>비고</th>');
+    tr.insertAdjacentHTML('beforeend', '<th>월 합계</th><th>전월실적</th><th>총 합계</th><th>비고</th>');
 
     tr.querySelector('#selectAll').onchange = e =>
         tbody.querySelectorAll('.row-select')
@@ -94,6 +94,8 @@ async function saveData() {
         amounts: [...tr.querySelectorAll('.amount-input')]
             .map(i => i.value.replace(/,/g, '') || '0'),
         sum: qs(tr, '.sum-input')?.value || '0',
+        prev: qs(tr, '.prev-input')?.value || '0',
+        total: qs(tr, '.total-input')?.value || '0',
         remark: qs(tr, '.remark-input input')?.value || ''
     }));
     await setDoc(doc(db, 'monthlyData', docKey()), { data });
@@ -101,19 +103,75 @@ async function saveData() {
 }
 
 async function loadData() {
+    // 🔁 전월 실적 누적용: 1월부터 현재월 이전까지 total 누적
+    const prevTotals = {};  // 이름별 누적 total
+
+    for (let y = 2025; y <= year; y++) {
+        const startMonth = y === 2025 ? 1 : 1;
+        const endMonth = (y === year) ? (month - 1) : 12;
+
+        for (let m = startMonth; m <= endMonth; m++) {
+            const key = `${y}-${String(m).padStart(2, '0')}`;
+            const snap = await getDoc(doc(db, 'monthlyData', key));
+            if (!snap.exists()) continue;
+
+            snap.data().data.forEach(r => {
+                const name = r.name;
+                const total = parseInt(r.total?.replace(/,/g, '') || '0');
+                if (!name) return;
+                prevTotals[name] = total;
+            });
+        }
+    }
+
+    // 🔁 현재 달 데이터 가져오기
     const snap = await getDoc(doc(db, 'monthlyData', docKey()));
-    if (!snap.exists()) return;
+    const currentData = snap.exists() ? snap.data().data : [];
+
+    // 🔁 이름 목록: 이전달 + 현재달 통합
+    const nameSet = new Set([
+        ...Object.keys(prevTotals),           // 전월 이름
+        ...currentData.map(r => r.name)       // 이번달 이름
+    ]);
 
     tbody.innerHTML = '';
-    snap.data().data.forEach(r => {
-        addNameRow(r.name);
+
+    for (const name of nameSet) {
+        const rowData = currentData.find(r => r.name === name);
+        const prevTotal = prevTotals[name] || 0;
+
+        addNameRow(name);
         const tr = tbody.lastElementChild;
-        [...tr.querySelectorAll('.amount-input')]
-            .forEach((inp, i) => { inp.value = r.amounts[i] || ''; fmt(inp); });
-        qsIn(tr, '.sum-input').value = r.sum;
-        qsIn(tr, '.remark-input input').value = r.remark;
-    });
+
+        // 현재 데이터가 있으면 채움
+        if (rowData) {
+            [...tr.querySelectorAll('.amount-input')].forEach((inp, i) => {
+                inp.value = rowData.amounts[i] || '';
+                fmt(inp);
+            });
+            qsIn(tr, '.sum-input').value = rowData.sum || '0';
+            qsIn(tr, '.remark-input input').value = rowData.remark || '';
+        }
+
+        // 전월실적 입력 (누적된 total)
+        qsIn(tr, '.prev-input').value = prevTotal.toLocaleString('ko-KR');
+
+        // 총합계 계산: 월합계 + 전월실적
+        const currSum = parseInt(qsIn(tr, '.sum-input').value.replace(/,/g, '') || '0');
+        const total = prevTotal + currSum;
+        qsIn(tr, '.total-input').value = total.toLocaleString('ko-KR');
+
+        // 합계 계산 다시 수행
+        updateSum(tr);
+    }
 }
+
+function getPrevMonthKey() {
+    const prevMonth = month === 1 ? 12 : month - 1;
+    const prevYear = month === 1 ? year - 1 : year;
+    return `${prevYear}-${String(prevMonth).padStart(2, '0')}`;
+}
+
 
 /* ───────── 행 추가 ───────── */
 function addNameRow(name = '') {
@@ -128,10 +186,12 @@ function addNameRow(name = '') {
         tr.insertAdjacentHTML('beforeend',
             `<td><input type="text" class="amount-input"></td>`);
 
-    tr.insertAdjacentHTML('beforeend',
-        `<td><input type="text" class="sum-input" readonly value="0"></td>
-    <td class="remark-input"><input type="text"></td>`);
-
+    tr.insertAdjacentHTML('beforeend', `
+        <td><input type="text" class="sum-input" readonly value="0"></td>
+        <td><input type="text" class="prev-input" readonly value="0"></td>
+        <td><input type="text" class="total-input" readonly value="0"></td>
+        <td class="remark-input"><input type="text"></td>
+    `);
     /* 숫자 입력 이벤트 */
     tr.querySelectorAll('.amount-input').forEach(inp => {
         inp.oninput = () => { fmt(inp); updateSum(tr); };
@@ -139,6 +199,11 @@ function addNameRow(name = '') {
     });
     tr.querySelector('.name-input').onkeydown = navKey;
     tr.querySelector('.remark-input input').onkeydown = navKey;
+
+    tr.querySelector('.sum-input')?.addEventListener('keydown', navKey);
+    tr.querySelector('.prev-input')?.addEventListener('keydown', navKey);
+    tr.querySelector('.total-input')?.addEventListener('keydown', navKey);
+    tr.querySelector('.remark-input input')?.addEventListener('keydown', navKey);
 
     tbody.appendChild(tr);
 }
@@ -152,11 +217,18 @@ function updateSum(target) {
     const sum = inputs.reduce((a, i) => a + (+i.value.replace(/,/g, '') || 0), 0);
 
     const sumCell = row.querySelector('.sum-input');
-    if (sumCell) {                                    // ← 방어 코드
+    if (sumCell) {
         sumCell.value = sum.toLocaleString('ko-KR');
     } else {
-        /* 개발 중 경고 로그만 남김 (배포 시 제거해도 무방) */
         console.warn('sum-input not found in row →', row);
+    }
+
+    const prevCell = row.querySelector('.prev-input');
+    const totalCell = row.querySelector('.total-input');
+    const prev = prevCell ? parseInt(prevCell.value.replace(/,/g, '') || '0') : 0;
+
+    if (totalCell) {
+        totalCell.value = (sum + prev).toLocaleString('ko-KR');
     }
 }
 
@@ -223,7 +295,7 @@ function exportToExcel() {
     /* 헤더 */
     const header = ['이름'];
     for (let d = 1; d <= new Date(year, month, 0).getDate(); d++) header.push(String(d));
-    header.push('합계', '비고');
+    header.push('월 합계', '전월실적', '총합계', '비고');
     rows.push(header);
 
     /* 바디 */
@@ -232,7 +304,9 @@ function exportToExcel() {
         r.push(qsIn(tr, '.name-input').value);
         tr.querySelectorAll('.amount-input')
             .forEach(i => r.push(i.value.replace(/,/g, '') || '0'));
-        r.push(qsIn(tr, '.sum-input').value);
+        r.push(qsIn(tr, '.month-sum-input').value);
+        r.push(qsIn(tr, '.prev-input').value);
+        r.push(qsIn(tr, '.total-input').value);
         r.push(qsIn(tr, '.remark-input input').value);
         rows.push(r);
     });
@@ -258,9 +332,9 @@ function handleFileUpload(e) {
         rows.slice(1).forEach(row => {
             if (!row[0]) return; // 이름 없으면 skip
             const name = row[0];
-            const remark  = row.length > days + 2    // ★ 오로지 한 번만!
-                          ? row[days + 2] : "";
-
+            const remark  = row.length > days + 3 ? row[days + 3] : "";
+            const prev    = row.length > days + 1 ? row[days + 1] : "";
+            const total   = row.length > days + 2 ? row[days + 2] : "";
             addNameRow(name);
             const tr = tbody.lastElementChild;
             const inputs = [...tr.querySelectorAll('.amount-input')];
@@ -273,6 +347,8 @@ function handleFileUpload(e) {
             }
 
             // 비고 입력
+            qs(tr, '.prev-input').value = prev;
+            qs(tr, '.total-input').value = total;
             qs(tr, '.remark-input input').value = remark;
 
             // 합계 계산
