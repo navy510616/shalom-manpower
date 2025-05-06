@@ -9,8 +9,7 @@
 }
 
 /* 셀 공통 스타일 */
-#summaryTable th,
-#summaryTable td {
+#summaryTable th, #summaryTable td {
     border: 1px solid #ccc;
     padding: 6px 4px;
     text-align: center;
@@ -33,6 +32,10 @@
 /* 👇 날짜 열은 별도 크기로 설정 */
 #summaryTable th.day-col,
 #summaryTable td.day-col {
+    width: 40px;
+    min-width: 40px;
+    max-width: 40px;
+    z-index: 1;
     font-size: 15px;
 }
 
@@ -40,7 +43,14 @@
     background-color: #ecf0f1;
     position: sticky;
     top: 0;
-    z-index: 3;
+    z-index: 10;
+}
+
+#summaryTable thead th {
+    position: sticky;
+    top: 0;
+    background-color: #ecf0f1;
+    z-index: 10;
 }
 
 #summaryTable thead th:first-child,
@@ -51,41 +61,63 @@
     z-index: 2;
 }
 
-#summaryTable thead th:nth-child(2),
-#summaryTable tbody td:nth-child(2) {
+#summaryTable thead th:nth-child(2) {
     position: sticky;
     left: 30px;
     background-color: #ecf0f1;
     z-index: 3;
+    /* 헤더는 높게 */
 }
 
-/* 열 별 고정 너비 설정 */
-th.checkbox-col,
-td.checkbox-col {
-    width: 30px;
-    min-width: 30px;
-    max-width: 30px;
+#summaryTable tbody td:nth-child(2) {
+    position: sticky;
+    left: 30px;
+    background-color: #ecf0f1;
+    z-index: 1;
+    /* 셀은 낮게 */
 }
 
-th.name-col,
-td.name-col {
-    width: 70px;
-    min-width: 70px;
-    max-width: 70px;
+/* 순번 열 */
+th.index-col,
+td.index-col {
+    position: sticky;
+    left: 110px;
+    width: 40px;
+    min-width: 40px;
+    max-width: 40px;
+    background-color: #ecf0f1;
+    z-index: 8;
 }
 
 th.remark-col,
 td.remark-col {
+    position: sticky;
+    left: 30px;
     width: 80px;
     min-width: 80px;
     max-width: 80px;
+    background-color: #ecf0f1;
+    z-index: 5;
+}
+
+th.name-col,
+td.name-col {
+    position: sticky;
+    left: 140px;
+    width: 80px;
+    min-width: 80px;
+    max-width: 80px;
+    background-color: #ecf0f1;
+    z-index: 6;
 }
 
 th.day-col,
 td.day-col {
-    width: 34px;  /*날짜열 너비 조정 */
+    width: 34px;
+    /*날짜열 너비 조정 */
     min-width: 34px;
     max-width: 34px;
+    z-index: 1;
 }
 
 #summaryTable td[contenteditable='true'] {
@@ -167,9 +199,14 @@ td.day-col {
 
 /* 스크롤 컨테이너 */
 .table-scroll-container {
-    overflow: auto;
+    overflow-x: auto;
+    overflow-y: auto;
+    width: 100%;
+    min-width: 100%;
     height: calc(100vh - 150px);
     position: relative;
+    -webkit-overflow-scrolling: touch;
+    /* iOS 사파리에서 부드러운 스크롤 */
 }
 
 /* 줌 기반 입력 크기 설정 */
@@ -238,4 +275,66 @@ input[type="number"]::-webkit-inner-spin-button {
 
 .name-col {
     white-space: nowrap;
+}
+
+#summaryTable th.checkbox-col, #summaryTable td.checkbox-col {
+    position: sticky;
+    left: 0;
+    width: 30px;
+    background-color: #ecf0f1;
+    z-index: 5;
+}
+
+#summaryTable th.remark-col, #summaryTable td.remark-col {
+    position: sticky;
+    left: 30px;
+    width: 80px;
+    /* checkbox 30px + index 30px */
+    background-color: #ecf0f1;
+    z-index: 4;
+}
+
+#summaryTable th.index-col {
+    position: sticky;
+    left: 110px;
+    background-color: #ecf0f1;
+    z-index: 7; /* 헤더는 높게 */
+}
+
+#summaryTable td.index-col {
+    position: sticky;
+    left: 110px;
+    background-color: #ecf0f1;
+    z-index: 6; /* 바디는 낮게 */
+}
+
+#summaryTable th.name-col, #summaryTable td.name-col {
+    position: sticky;
+    left: 150px;
+    width: 80px;
+    /* checkbox 30 + index 30 + remark 80 */
+    background-color: #ecf0f1;
+    z-index: 2;
+}
+
+#summaryTable th.day-col,
+#summaryTable td.day-col {
+    z-index: 1;
+}
+
+#summaryTable thead th.name-col {
+    z-index: 6;
+}
+
+#summaryTable tbody td.name-col {
+    z-index: 5;
+}
+
+#summaryTable thead th.remark-col {
+    z-index: 7;  /* 또는 8 */
+}
+
+#summaryTable td:focus {
+    outline: 2px solid #4285f4;
+    background-color: #eaf1fb;
 }
