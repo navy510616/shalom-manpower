@@ -119,7 +119,7 @@ async function loadData() {
                 const name = r.name;
                 const total = parseInt(r.total?.replace(/,/g, '') || '0');
                 if (!name) return;
-                prevTotals[name] = total;
+                prevTotals[name] = (prevTotals[name] || 0) + total;
             });
         }
     }
@@ -153,9 +153,11 @@ async function loadData() {
             qsIn(tr, '.remark-input input').value = rowData.remark || '';
         }
 
-        // 전월잔금 입력 (누적된 total)
+        // ✅ 사용자 입력 prev가 있으면 그것을 우선 사용
         const userPrev = rowData?.prev?.replace(/,/g, '');
-        const finalPrev = userPrev ? parseInt(userPrev) : prevTotal;
+        const finalPrev = userPrev ? parseInt(userPrev) : accumulatedPrevTotal;
+
+        // 전월잔금 입력 (누적된 total)
         qsIn(tr, '.prev-input').value = finalPrev.toLocaleString('ko-KR');
         
         // 총합계 계산: 월합계 + 전월잔금
