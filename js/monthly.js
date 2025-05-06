@@ -66,7 +66,7 @@ function makeHeader(y, m) {
     const days = new Date(y, m, 0).getDate();
     for (let d = 1; d <= days; d++)
         tr.insertAdjacentHTML('beforeend', `<th>${d}</th>`);
-    tr.insertAdjacentHTML('beforeend', '<th>월 합계</th><th>전월실적</th><th>총 합계</th><th>비고</th>');
+    tr.insertAdjacentHTML('beforeend', '<th>월 합계</th><th>전월잔금</th><th>총 합계</th><th>비고</th>');
 
     tr.querySelector('#selectAll').onchange = e =>
         tbody.querySelectorAll('.row-select')
@@ -153,10 +153,10 @@ async function loadData() {
             qsIn(tr, '.remark-input input').value = rowData.remark || '';
         }
 
-        // 전월실적 입력 (누적된 total)
+        // 전월잔금 입력 (누적된 total)
         qsIn(tr, '.prev-input').value = prevTotal.toLocaleString('ko-KR');
 
-        // 총합계 계산: 월합계 + 전월실적
+        // 총합계 계산: 월합계 + 전월잔금
         const currSum = parseInt(qsIn(tr, '.sum-input').value.replace(/,/g, '') || '0');
         const total = prevTotal + currSum;
         qsIn(tr, '.total-input').value = total.toLocaleString('ko-KR');
@@ -188,7 +188,7 @@ function addNameRow(name = '') {
 
     tr.insertAdjacentHTML('beforeend', `
         <td><input type="text" class="sum-input" readonly value="0"></td>
-        <td><input type="text" class="prev-input" readonly value="0"></td>
+        <td><input type="text" class="prev-input" value="0"></td>
         <td><input type="text" class="total-input" readonly value="0"></td>
         <td class="remark-input"><input type="text"></td>
     `);
@@ -204,6 +204,11 @@ function addNameRow(name = '') {
     tr.querySelector('.prev-input')?.addEventListener('keydown', navKey);
     tr.querySelector('.total-input')?.addEventListener('keydown', navKey);
     tr.querySelector('.remark-input input')?.addEventListener('keydown', navKey);
+
+    tr.querySelector('.prev-input').oninput = () => {
+        fmt(tr.querySelector('.prev-input'));
+        updateSum(tr);
+    };
 
     tbody.appendChild(tr);
 }
@@ -295,7 +300,7 @@ function exportToExcel() {
     /* 헤더 */
     const header = ['이름'];
     for (let d = 1; d <= new Date(year, month, 0).getDate(); d++) header.push(String(d));
-    header.push('월 합계', '전월실적', '총합계', '비고');
+    header.push('월 합계', '전월잔금', '총합계', '비고');
     rows.push(header);
 
     /* 바디 */
@@ -304,7 +309,7 @@ function exportToExcel() {
         r.push(qsIn(tr, '.name-input').value);
         tr.querySelectorAll('.amount-input')
             .forEach(i => r.push(i.value.replace(/,/g, '') || '0'));
-        r.push(qsIn(tr, '.month-sum-input').value);
+        r.push(qsIn(tr, '.sum-input').value);
         r.push(qsIn(tr, '.prev-input').value);
         r.push(qsIn(tr, '.total-input').value);
         r.push(qsIn(tr, '.remark-input input').value);
