@@ -129,9 +129,10 @@ async function loadData() {
     const currentData = snap.exists() ? snap.data().data : [];
 
     // 🔁 이름 목록: 이전달 + 현재달 통합
+    const currentNames = currentData.map(r => r.name);
     const nameSet = new Set([
-        ...Object.keys(prevTotals),           // 전월 이름
-        ...currentData.map(r => r.name)       // 이번달 이름
+        ...Object.keys(prevTotals).filter(name => currentNames.includes(name)),
+        ...currentNames
     ]);
 
     tbody.innerHTML = '';
