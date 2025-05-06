@@ -257,10 +257,6 @@ input.sum-input {
     text-align: right;
 }
 
-input.sum-input {
-    width: 12ch;
-}
-
 /* .resizer {
     width: 6px;
     background: #34495e;
@@ -310,4 +306,13 @@ input.sum-input {
 #scheduleTable {
     min-width: 1200px;
     width: max-content;
+}
+
+input.sum-input,
+input.prev-input,
+input.total-input {
+    width: 10ch;
+    font-size: var(--input-font-size);
+    height: var(--input-height);
+    text-align: right;
 }
