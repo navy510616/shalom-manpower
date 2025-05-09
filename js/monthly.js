@@ -88,17 +88,34 @@ const docKey = () => `${year}-${String(month).padStart(2, '0')}`;
 /* ───────── 저장 / 불러오기 ───────── */
 async function saveData() {
     const rows = [...tbody.querySelectorAll('tr')];
+    const key = docKey();
 
-    const data = rows.map(tr => ({
-        name: qs(tr, '.name-input')?.value.trim() || '',
-        amounts: [...tr.querySelectorAll('.amount-input')]
-            .map(i => i.value.replace(/,/g, '') || '0'),
-        sum: qs(tr, '.sum-input')?.value || '0',
-        prev: qs(tr, '.prev-input')?.value || '0',
-        total: qs(tr, '.total-input')?.value || '0',
-        remark: qs(tr, '.remark-input input')?.value || ''
-    }));
-    await setDoc(doc(db, 'monthlyData', docKey()), { data });
+    const deleted = new Set(JSON.parse(sessionStorage.getItem(key + '_deleted') || '[]'));
+
+    const data = rows.map(tr => {
+        const name = qs(tr, '.name-input')?.value.trim() || '';
+        // 삭제 목록에 있지만 다시 입력된 이름이면 제거
+        if (deleted.has(name)) deleted.delete(name);
+
+        return {
+            name,
+            amounts: [...tr.querySelectorAll('.amount-input')]
+                .map(i => i.value.replace(/,/g, '') || '0'),
+            sum: qs(tr, '.sum-input')?.value || '0',
+            prev: qs(tr, '.prev-input')?.value || '0',
+            total: qs(tr, '.total-input')?.value || '0',
+            remark: qs(tr, '.remark-input input')?.value || ''
+        };
+    });
+
+    // 최신 deletedNames를 다시 세션과 서버에 저장
+    const deletedNames = [...deleted];
+    sessionStorage.setItem(key + '_deleted', JSON.stringify(deletedNames));
+
+    await setDoc(doc(db, 'monthlyData', docKey()), {
+        data,
+        deletedNames
+    });
     toast('✅ 저장 완료');
 }
 
@@ -107,7 +124,8 @@ async function loadData() {
     const prevTotals = {};  // 이름별 누적 total
 
     for (let y = 2025; y <= year; y++) {
-        const startMonth = y === 2025 ? 1 : 1;
+        const startMonth = 1;
+        //const startMonth = y === 2025 ? 1 : 1;
         const endMonth = (y === year) ? (month - 1) : 12;
 
         for (let m = startMonth; m <= endMonth; m++) {
@@ -127,10 +145,37 @@ async function loadData() {
     // 🔁 현재 달 데이터 가져오기
     const snap = await getDoc(doc(db, 'monthlyData', docKey()));
     const currentData = snap.exists() ? snap.data().data : [];
+    const deletedNames = snap.exists() ? snap.data().deletedNames || [] : [];
+    const deletedSet = new Set(deletedNames);
 
-    // 🔁 이름 목록: 이전달 + 현재달 통합
-    const currentNames = currentData.map(r => r.name);
-    const nameSet = new Set(currentData.map(r => r.name));
+    // 세션에도 기록 (삭제 이벤트에서도 활용 가능)
+    sessionStorage.setItem(docKey() + '_deleted', JSON.stringify(deletedNames));
+    
+    // 🔁 직전 달 데이터 가져오기
+    const prevKey = getPrevMonthKey();
+    const prevSnap = await getDoc(doc(db, 'monthlyData', prevKey));
+    const prevData = prevSnap.exists() ? prevSnap.data().data : [];
+    
+    // 🔁 삭제된 이름 목록 로드
+    const deleted = new Set((snap.exists() && snap.data().deletedNames) || []);
+    sessionStorage.setItem(docKey() + '_deleted', JSON.stringify([...deleted]));
+
+    // 🔁 이름 목록: 이전달 + 현재달 통합 (현재달 우선)
+    const nameSet = new Set();
+
+    // 현재 달에 있는 이름은 그대로 추가
+    currentData.forEach(r => {
+        if (r.name && !deletedSet.has(r.name)) {
+            nameSet.add(r.name);
+        }
+    });
+
+    // 이전 달 이름 중, 삭제되지 않은 이름만 추가
+    prevData.forEach(r => {
+        if (r.name && !nameSet.has(r.name) && !deletedSet.has(r.name)) {
+            nameSet.add(r.name);
+        }
+    });
 
     tbody.innerHTML = '';
 
@@ -141,29 +186,28 @@ async function loadData() {
         addNameRow(name);
         const tr = tbody.lastElementChild;
 
-        // 현재 데이터가 있으면 채움
+        // 현재 달 데이터가 있으면 일부 필드 채움
         if (rowData) {
+            qsIn(tr, '.remark-input input').value = rowData.remark || '';
             [...tr.querySelectorAll('.amount-input')].forEach((inp, i) => {
-                inp.value = rowData.amounts[i] || '';
+                inp.value = rowData.amounts?.[i] || '';
                 fmt(inp);
             });
             qsIn(tr, '.sum-input').value = rowData.sum || '0';
-            qsIn(tr, '.remark-input input').value = rowData.remark || '';
         }
 
-        // ✅ 사용자 입력 prev가 있으면 그것을 우선 사용
-        const userPrev = rowData?.prev?.replace(/,/g, '');
-        const finalPrev = userPrev ? parseInt(userPrev) : accumulatedPrevTotal;
-
-        // 전월잔금 입력 (누적된 total)
+        // ✅ 사용자 입력 prev가 존재하면 그것을 사용 (빈 문자열 포함)
+        let finalPrev = prevTotal;
+        if (rowData?.prev !== undefined && rowData.prev !== null) {
+            finalPrev = parseInt(rowData.prev.replace(/,/g, '') || '0');
+        }
         qsIn(tr, '.prev-input').value = finalPrev.toLocaleString('ko-KR');
-        
-        // 총합계 계산: 월합계 + 전월잔금
+
+        // 총합계 = sum + prev
         const currSum = parseInt(qsIn(tr, '.sum-input').value.replace(/,/g, '') || '0');
-        const total = prevTotal + currSum;
+        const total = currSum + prevTotal;
         qsIn(tr, '.total-input').value = total.toLocaleString('ko-KR');
 
-        // 합계 계산 다시 수행
         updateSum(tr);
     }
 }
@@ -263,9 +307,18 @@ function navKey(e) {
 
 /* ───────── 기타 유틸 ───────── */
 function deleteRows() {
-    tbody.querySelectorAll('.row-select:checked')
-        .forEach(cb => cb.closest('tr').remove());
+    const key = docKey();
+    const deleted = new Set(JSON.parse(sessionStorage.getItem(key + '_deleted') || '[]'));
+
+    tbody.querySelectorAll('.row-select:checked').forEach(cb => {
+        const name = cb.closest('tr')?.querySelector('.name-input')?.value?.trim();
+        if (name) deleted.add(name);
+        cb.closest('tr').remove();
+    });
+
+    sessionStorage.setItem(key + '_deleted', JSON.stringify([...deleted]));
 }
+
 function sortRows(dir) {
     [...tbody.querySelectorAll('tr')]
         .sort((a, b) => a.querySelector('.name-input').value
