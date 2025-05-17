@@ -663,6 +663,61 @@ export function reset() {
     console.log("🔄 summary 모듈 초기화됨");
 }
 
+let selectedCell = null;
+
+// 셀 클릭 시 선택 표시
+document.addEventListener('click', (e) => {
+  if (e.target.tagName === 'TD') {
+    if (selectedCell) selectedCell.classList.remove('selected-cell');
+    selectedCell = e.target;
+    selectedCell.classList.add('selected-cell');
+  }
+});
+
+document.getElementById('moveRowUpBtn').addEventListener('click', () => {
+  const table = document.getElementById('summaryTable').querySelector('tbody');
+  const rows = Array.from(table.rows);
+  for (let i = 1; i < rows.length; i++) {
+    const checkbox = rows[i].querySelector('input[type="checkbox"]');
+    if (checkbox && checkbox.checked) {
+      const currentRow = rows[i];
+      const prevRow = rows[i - 1];
+      if (prevRow) {
+        table.insertBefore(currentRow, prevRow);
+      }
+    }
+  }
+  updateRowIndexes(); // ✅ 순번 갱신
+});
+
+document.getElementById('moveRowDownBtn').addEventListener('click', () => {
+  const table = document.getElementById('summaryTable').querySelector('tbody');
+  const rows = Array.from(table.rows);
+  // 아래쪽 이동은 뒤에서부터 순회해야 꼬이지 않음
+  for (let i = rows.length - 2; i >= 0; i--) {
+    const checkbox = rows[i].querySelector('input[type="checkbox"]');
+    if (checkbox && checkbox.checked) {
+      const currentRow = rows[i];
+      const nextRow = rows[i + 1];
+      if (nextRow) {
+        table.insertBefore(nextRow, currentRow);
+      }
+    }
+  }
+  updateRowIndexes(); // ✅ 순번 갱신
+});
+
+function updateRowIndexes() {
+  const tbody = document.getElementById('summaryTable').querySelector('tbody');
+  const rows = Array.from(tbody.rows);
+  rows.forEach((row, index) => {
+    const indexCell = row.cells[2]; // ✅ 0: 체크박스, 1: 비고, 2: 순번
+    if (indexCell) {
+      indexCell.textContent = index + 1;
+    }
+  });
+}
+
 //셀 병합 기능
 // function mergeSelectedCellsHorizontally() {
 //     const selected = Array.from(document.querySelectorAll('.cell-selected'));
