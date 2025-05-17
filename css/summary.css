@@ -338,3 +338,14 @@ input[type="number"]::-webkit-inner-spin-button {
     outline: 2px solid #4285f4;
     background-color: #eaf1fb;
 }
+
+.selected-cell {
+  outline: 2px solid red;
+}
+
+#summaryTable th:nth-child(2),
+#summaryTable td:nth-child(2) {
+  min-width: 80px; /* 원하시는 만큼 늘려도 됩니다 */
+  max-width: 200px;
+  width: 100px;
+}
