@@ -1,5 +1,7 @@
 import * as XLSX from "https://cdn.sheetjs.com/xlsx-0.20.0/package/xlsx.mjs";
+import { getFirestore, doc, getDoc, setDoc } from 'https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js';
 
+const db = getFirestore();
 let currentDate = new Date();
 let zoomLevel = 1;
 
@@ -84,12 +86,14 @@ function setupControls() {
     qs('zoomInBtn')?.addEventListener('click', () => {
         zoomLevel += 0.1;
         const table = qs('summaryTable');
-        table.style.transformOrigin = 'top left'; // ✅ 좌측 상단 기준
-        table.style.transform = `scale(${zoomLevel})`;
+        table.style.transform = '';
+        table.style.zoom = zoomLevel;  // ✅ sticky와 호환되는 방식
     });
     qs('zoomOutBtn')?.addEventListener('click', () => {
         zoomLevel = Math.max(0.5, zoomLevel - 0.1);
-        qs('summaryTable').style.transform = `scale(${zoomLevel})`;
+        const table = qs('summaryTable');
+        table.style.transform = '';
+        table.style.zoom = zoomLevel;  // ✅ sticky와 호환되는 방식
     });
 
     qs('importBtn')?.addEventListener('click', () => {
@@ -123,7 +127,7 @@ function enableArrowNavigation() {
         const cell = active;
         const row = cell.parentElement;
         const tbody = document.querySelector('#summaryTable tbody');
-        
+
         const rows = Array.from(tbody.rows);
         const rowIndex = rows.indexOf(row);
         const cells = Array.from(row.cells);
@@ -218,11 +222,20 @@ function addNameRow() {
 
 function deleteSelectedRows() {
     const tbody = document.querySelector('#summaryTable tbody');
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth() + 1;
+    const key = `${year}-${month}`;
+    const deleted = new Set(JSON.parse(sessionStorage.getItem(key + '_deleted') || '[]'));
+
     tbody.querySelectorAll('tr').forEach(row => {
         if (row.querySelector('input[type="checkbox"]')?.checked) {
+            const name = row.querySelector('.name-col')?.textContent.trim();
+            if (name) deleted.add(name);
             row.remove();
         }
     });
+
+    sessionStorage.setItem(key + '_deleted', JSON.stringify([...deleted]));
 
     // ✅ 순번 다시 정렬
     Array.from(tbody.rows).forEach((row, idx) => {
@@ -231,6 +244,8 @@ function deleteSelectedRows() {
             indexCell.textContent = idx + 1;
         }
     });
+
+    updateRowIndexes();
 }
 
 function sortByNameAsc() {
@@ -536,12 +551,6 @@ export function enableColorPicker() {
     });
 }
 
-import {
-    getFirestore, doc, getDoc, setDoc
-} from 'https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js';
-
-const db = getFirestore(); // 이미 monthly.js에서 초기화됨
-
 async function saveDataToFirebase() {
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth() + 1;
@@ -562,9 +571,7 @@ async function saveDataToFirebase() {
                 color: cells[i].style.backgroundColor || ''
             });
         }
-
-        row.push({ value: remark, color: '' });
-        summaryData.push({ name, data: row });
+        summaryData.push({ name, remark, data: row });
     });
 
     try {
@@ -585,44 +592,84 @@ async function loadDataFromFirebase() {
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth() + 1;
     const key = `${year}-${month}`;
-    const docRef = doc(db, 'summary', key);
+    const currentMonthDays = new Date(year, month, 0).getDate();
 
-    try {
-        const docSnap = await getDoc(docRef);
-        if (!docSnap.exists()) {
-            console.warn('❗ 불러올 데이터가 없습니다.');
-            return;
+    const currSnap = await getDoc(doc(db, 'summary', key));
+    const currDataRaw = currSnap.exists() ? currSnap.data().rows || [] : [];
+    const currData = Array.isArray(currDataRaw) ? currDataRaw : Object.values(currDataRaw);
+    const deletedNames = currSnap.exists() ? currSnap.data().deletedNames || [] : [];
+    const deletedSet = new Set(deletedNames);
+    sessionStorage.setItem(key + '_deleted', JSON.stringify(deletedNames));
+
+    const nameMap = new Map();
+    currData.forEach(r => {
+        const name = (r.name || '').trim();
+        if (name && !deletedSet.has(name)) {
+            nameMap.set(name, r);
         }
+    });
 
-        const { rows } = docSnap.data();
-        const tbody = document.querySelector('#summaryTable tbody');
-        const days = new Date(year, month, 0).getDate();
+    const allowRemarkCarryOver = (year > 2025) || (year === 2025 && month >= 5);
+    const carryOver = {};
 
-        tbody.innerHTML = '';
+    for (let y = 2025; y <= year; y++) {
+        const startMonth = (y === 2025 ? 5 : 1);
+        const endMonth = (y === year ? month - 1 : 12);
 
-        rows.forEach(({ name, data }, idx) => {
-            const remark = data.length > days ? data[days].value : '';
-            const dayCells = data.slice(0, data.length - 1).map(cell => `
-                <td contenteditable="true" class="day-col" style="background-color: ${cell.color || ''}">
-                    ${cell.value || ''}
-                </td>
-            `).join('');
+        for (let m = startMonth; m <= endMonth; m++) {
+            const prevKey = `${y}-${m}`; 
+            const snap = await getDoc(doc(db, 'summary', prevKey));
+ 
+            if (!snap.exists()) continue;
 
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td class="checkbox-col"><input type="checkbox" /></td>
-                <td class="remark-col" contenteditable="true">${remark}</td>
-                <td class="index-col">${idx + 1}</td>
-                <td class="name-col" contenteditable="true">${name}</td>
-                ${dayCells}
-            `;
-            tbody.appendChild(tr);
-        });
+            const raw = snap.data().rows || [];
+            const rows = Array.isArray(raw) ? raw : Object.values(raw);
 
-        console.log('✅ Firebase에서 데이터 불러오기 완료');
-    } catch (err) {
-        console.error('❌ 데이터 불러오기 실패:', err);
+            rows.forEach(r => {
+                const name = (r.name || '').trim();
+                const remark = r.remark || '';
+
+                if (!name) return;
+                if (deletedSet.has(name)) return;
+                if (nameMap.has(name)) return;
+                if (carryOver[name]) return;
+
+                carryOver[name] = {
+                    name,
+                    remark: allowRemarkCarryOver ? remark : '',
+                    data: Array.from({ length: currentMonthDays }, () => ({ value: '', color: '' }))
+                };
+            });
+        }
     }
+
+    for (const name in carryOver) {
+        nameMap.set(name, carryOver[name]);
+    }
+
+    const tbody = document.querySelector('#summaryTable tbody');
+    tbody.innerHTML = '';
+
+    let index = 1;
+    nameMap.forEach(({ name, remark, data }) => {
+        const dayCells = data.slice(0, currentMonthDays).map(cell => `
+            <td contenteditable="true" class="day-col" style="background-color: ${cell.color || ''}">
+                ${cell.value || ''}
+            </td>
+        `).join('');
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td class="checkbox-col"><input type="checkbox" /></td>
+            <td class="remark-col" contenteditable="true">${remark || ''}</td>
+            <td class="index-col">${index++}</td>
+            <td class="name-col" contenteditable="true">${name}</td>
+            ${dayCells}
+        `;
+        tbody.appendChild(tr);
+    });
+
+    console.log('✅ 최종 렌더링 완료');
 }
 
 function toast(msg) {
@@ -667,55 +714,55 @@ let selectedCell = null;
 
 // 셀 클릭 시 선택 표시
 document.addEventListener('click', (e) => {
-  if (e.target.tagName === 'TD') {
-    if (selectedCell) selectedCell.classList.remove('selected-cell');
-    selectedCell = e.target;
-    selectedCell.classList.add('selected-cell');
-  }
+    if (e.target.tagName === 'TD') {
+        if (selectedCell) selectedCell.classList.remove('selected-cell');
+        selectedCell = e.target;
+        selectedCell.classList.add('selected-cell');
+    }
 });
 
 document.getElementById('moveRowUpBtn').addEventListener('click', () => {
-  const table = document.getElementById('summaryTable').querySelector('tbody');
-  const rows = Array.from(table.rows);
-  for (let i = 1; i < rows.length; i++) {
-    const checkbox = rows[i].querySelector('input[type="checkbox"]');
-    if (checkbox && checkbox.checked) {
-      const currentRow = rows[i];
-      const prevRow = rows[i - 1];
-      if (prevRow) {
-        table.insertBefore(currentRow, prevRow);
-      }
+    const table = document.getElementById('summaryTable').querySelector('tbody');
+    const rows = Array.from(table.rows);
+    for (let i = 1; i < rows.length; i++) {
+        const checkbox = rows[i].querySelector('input[type="checkbox"]');
+        if (checkbox && checkbox.checked) {
+            const currentRow = rows[i];
+            const prevRow = rows[i - 1];
+            if (prevRow) {
+                table.insertBefore(currentRow, prevRow);
+            }
+        }
     }
-  }
-  updateRowIndexes(); // ✅ 순번 갱신
+    updateRowIndexes(); // ✅ 순번 갱신
 });
 
 document.getElementById('moveRowDownBtn').addEventListener('click', () => {
-  const table = document.getElementById('summaryTable').querySelector('tbody');
-  const rows = Array.from(table.rows);
-  // 아래쪽 이동은 뒤에서부터 순회해야 꼬이지 않음
-  for (let i = rows.length - 2; i >= 0; i--) {
-    const checkbox = rows[i].querySelector('input[type="checkbox"]');
-    if (checkbox && checkbox.checked) {
-      const currentRow = rows[i];
-      const nextRow = rows[i + 1];
-      if (nextRow) {
-        table.insertBefore(nextRow, currentRow);
-      }
+    const table = document.getElementById('summaryTable').querySelector('tbody');
+    const rows = Array.from(table.rows);
+    // 아래쪽 이동은 뒤에서부터 순회해야 꼬이지 않음
+    for (let i = rows.length - 2; i >= 0; i--) {
+        const checkbox = rows[i].querySelector('input[type="checkbox"]');
+        if (checkbox && checkbox.checked) {
+            const currentRow = rows[i];
+            const nextRow = rows[i + 1];
+            if (nextRow) {
+                table.insertBefore(nextRow, currentRow);
+            }
+        }
     }
-  }
-  updateRowIndexes(); // ✅ 순번 갱신
+    updateRowIndexes(); // ✅ 순번 갱신
 });
 
 function updateRowIndexes() {
-  const tbody = document.getElementById('summaryTable').querySelector('tbody');
-  const rows = Array.from(tbody.rows);
-  rows.forEach((row, index) => {
-    const indexCell = row.cells[2]; // ✅ 0: 체크박스, 1: 비고, 2: 순번
-    if (indexCell) {
-      indexCell.textContent = index + 1;
-    }
-  });
+    const tbody = document.getElementById('summaryTable').querySelector('tbody');
+    const rows = Array.from(tbody.rows);
+    rows.forEach((row, index) => {
+        const indexCell = row.cells[2]; // ✅ 0: 체크박스, 1: 비고, 2: 순번
+        if (indexCell) {
+            indexCell.textContent = index + 1;
+        }
+    });
 }
 
 //셀 병합 기능
